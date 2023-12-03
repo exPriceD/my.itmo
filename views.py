@@ -68,7 +68,7 @@ def registration():
         return Response(response=json.dumps(response, ensure_ascii=False), status=500, mimetype='application/json')
 
 
-@application.route("/api/get_all_chats", methods=["GET"])
+@application.route("/api/all_chats", methods=["GET"])
 @login_required
 def get_all_chats():
     user_id = current_user.id
@@ -96,7 +96,7 @@ def get_all_chats():
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route("/api/get_all_message/<int:chat_id>", methods=["GET"])
+@application.route("/api/all_message/<int:chat_id>", methods=["GET"])
 @login_required
 def get_all_message(chat_id):
     user_id = current_user.id
@@ -171,7 +171,7 @@ def create_chat():
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route("/api/get_all_users/<string:key>", methods=["GET"])
+@application.route("/api/all_users/<string:key>", methods=["GET"])
 @login_required
 def get_all_user(key: str):
     users = Users.query.all()
