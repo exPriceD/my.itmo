@@ -197,6 +197,18 @@ def create_chat():
 def get_new_messages():
     user_id = current_user.id
     unread_messages = Messages.query.filter(and_(Messages.recipient_id == user_id, Messages.is_read == False)).all()
+    response = {"status": 200, "messages": []}
+    for message in unread_messages:
+        data = {
+            "message_id": message.id,
+            "sender_id": message.sender_id,
+            "recipient_id": message.recipient_id,
+            "message": message.message,
+            "date": message.send_date,
+            "is_read": message.is_read
+        }
+        response["messages"].append(data)
+    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
 @application.route("/api/all_users/<string:key>", methods=["GET"])
