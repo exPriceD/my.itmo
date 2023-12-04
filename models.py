@@ -8,7 +8,7 @@ class Users(db.Model, UserMixin):
     password = db.Column(db.String(512))
     name = db.Column(db.String(128))
     isu = db.Column(db.Integer)
-    # img = db.Column(db.String(32768))
+    img = db.Column(db.String(32768))
 
     def __init__(self, login, password, name, isu):
         self.login = login
@@ -40,7 +40,7 @@ class Messages(db.Model):
     recipient_id = db.Column(db.Integer)
     message = db.Column(db.String(32768))
     media = db.Column(db.String(1024))
-    send_date = db.Column(db.DateTime)
+    send_date = db.Column(db.String(128))
     is_read = db.Column(db.Boolean)
 
     def __repr__(self):

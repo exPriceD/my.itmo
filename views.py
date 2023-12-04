@@ -7,7 +7,7 @@ from datetime import datetime
 from utils import check_register_data, check_login_data
 import json
 import random
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 
 
 @login_manager.user_loader
@@ -86,6 +86,7 @@ def get_all_chats():
             chat.last_message_date: {
                 "chat_id": chat.id,
                 "opponent_name": opponent.name,  # добавить img base64
+                "opponent_img": opponent.img,
                 "last_message": chat.last_message,
                 "message_date": chat.last_message_date,
                 "is_read": chat.is_read
@@ -126,32 +127,46 @@ def get_all_message(chat_id):
 @login_required
 def send_message():
     data = request.json
+    dt_now = str(datetime.now().strftime("%H:%M:%S"))
     message = Messages(
         chat_id=data["chat_id"],
         sender_id=data["sender_id"],
         recipient_id=data["recipient_id"],
         message=data["message"],
         media=None,
+        send_date=dt_now,
         is_read=False
     )
     db.session.add(message)
     db.session.flush()
     db.session.commit()
+    db.session.refresh(message)
     chat = Chats.query.filter_by(id=data["chat_id"]).first()
     chat.last_message = data["message"]
-    chat.last_message_date = str(datetime.now())
+    chat.last_message_date = dt_now
     chat.is_read = False
     db.session.commit()
-    response = {"status": 200}
+    current_message = Messages.query.filter_by(id=message.id).first()
+    response = {
+        "status": 200,
+        "message": {
+            "message_id": current_message.id,
+            "sender_id": current_message.sender_id,
+            "recipient_id": current_message.recipient_id,
+            "message": current_message.message,
+            "date": current_message.send_date
+        }
+    }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
 @application.route('/api/create_chat', methods=["POST"])
 @login_required
 def create_chat():
+    user_id = current_user.id
     data = request.json
     chat = Chats(
-        first_member_id=data["first_member_id"],
+        first_member_id=user_id,
         second_member_id=data["second_member_id"],
         creation_date=datetime.now(),
         last_message=None,
@@ -163,12 +178,25 @@ def create_chat():
     db.session.commit()
     db.session.refresh(chat)
     current_req = Chats.query.filter_by(id=chat.id).first()
+    opponent = Users.query.filter_by(id=chat.second_member_id).first()
     response = {
         "status": 200, "data": {
             "chat_id": current_req.id,
+            "opponent": {
+                "opponent_id": current_req.second_member_id,
+                "opponent_name": opponent.name,
+                "opponent_img": opponent.img
+            }
         }
     }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+
+
+@application.route('/api/new_messages', methods=["GET"])
+@login_required
+def get_new_messages():
+    user_id = current_user.id
+    unread_messages = Messages.query.filter(and_(Messages.recipient_id == user_id, Messages.is_read == False)).all()
 
 
 @application.route("/api/all_users/<string:key>", methods=["GET"])
@@ -178,10 +206,30 @@ def get_all_user(key: str):
     response = {"status": 200, "users": []}
     for user in users:
         if (key.isdigit and key in str(user.isu)) or (key in user.name):
-                data = {
-                    "id": user.id,
-                    "name": user.name,
-                    "isu": user.isu
-                }
-                response["users"].append(data)
+            data = {
+                "id": user.id,
+                "name": user.name,
+                "isu": user.isu,
+                "img": user.img
+            }
+            response["users"].append(data)
+    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+
+
+@application.route('/api/user/<int:id>')
+@login_required
+def get_user(id):
+    user = Users.query.filter_by(id=id).first()
+    if not user:
+        response = {"status": 404, "text": "User not found"}
+        return Response(response=json.dumps(response, ensure_ascii=False), status=404, mimetype='application/json')
+    response = {
+        "status": 200,
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "isu": user.isu,
+            "img": user.img
+        }
+    }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
