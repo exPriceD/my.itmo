@@ -1,4 +1,4 @@
-from config import application, db, login_manager
+from config import application, db, login_manager, mail
 from models import Users, Chats, Messages
 from flask import request, Response
 from flask_login import login_user, login_required, current_user, logout_user
@@ -8,7 +8,8 @@ from utils import check_register_data, check_login_data
 import json
 import random
 from sqlalchemy import or_, and_
-
+from flask_mail import Message
+from threading import Thread
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -128,6 +129,11 @@ def get_all_message(chat_id):
 def send_message():
     data = request.json
     dt_now = str(datetime.now().strftime("%H:%M:%S"))
+    sent_date = dt_now[:16]
+    sender_user = Users.query.filter_by(id=data["sender_id"])
+    rec_user = Users.query.filter_by(id=data["recipient_id"])
+    sender_name = sender_user.name
+    rec_email = rec_user.mail
     message = Messages(
         chat_id=data["chat_id"],
         sender_id=data["sender_id"],
@@ -157,6 +163,7 @@ def send_message():
             "date": current_message.send_date
         }
     }
+    send_mail(sender_name,rec_email,sent_date)
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
@@ -245,3 +252,18 @@ def get_user(id):
         }
     }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+
+def async_send_mail(app,msgg):
+    with app.app_context():
+        mail.send(msgg)
+
+def send_mail(sender_name,recipient_email,send_date):
+    subject = 'У вас новое сообщение на my.itmo'
+    body = (f"Вам пришло новое сообщение от пользователя {sender_name}.\n"
+            f"Отправлено {send_date}")
+    msg = Message(subject,sender=application.config['MAIL_DEFAULT_SENDER'],recipients=[recipient_email],body=body)
+    thr = Thread(target=async_send_mail, args=[application,msg])
+    thr.start()
+    return thr
+
+#send_mail('Шеф Виктор Баринов','your-email@mail.com',str(datetime.now())[:16])
