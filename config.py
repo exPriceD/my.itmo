@@ -25,7 +25,7 @@ application.config['MAIL_USE_TLS'] = False
 application.config['MAIL_USE_SSL'] = True
 application.config['MAIL_USERNAME'] = "myitmotest@mail.ru"
 application.config['MAIL_DEFAULT_SENDER'] = "myitmotest@mail.ru"
-application.config['MAIL_PASSWORD'] = "SQTRBZEJ5yQxCpj7Gd31"
+application.config['MAIL_PASSWORD'] = ""
 
 
 
