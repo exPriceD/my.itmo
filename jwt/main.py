@@ -84,7 +84,9 @@ def login():
 @app.route('/logout', methods=['POST'])
 @token_required
 def logout(current_user):
-    # Perform any necessary logout actions
+    current_user = None
+    session["token"] = None
+    session['logged_in'] = False
     return jsonify({'message': 'Logged out successfully!'})
 
 
