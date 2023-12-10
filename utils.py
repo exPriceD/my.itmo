@@ -1,4 +1,4 @@
-REGISTER_DATA = {'login': str, 'password': str, 'name': str}
+REGISTER_DATA = {'login': str, 'password': str, 'email': str, 'name': str}
 LOGIN_DATA = {'login': str, 'password': str}
 
 

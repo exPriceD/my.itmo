@@ -6,13 +6,15 @@ class Users(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     login = db.Column(db.String(512))
     password = db.Column(db.String(512))
+    email = db.Column(db.String(512))
     name = db.Column(db.String(128))
     isu = db.Column(db.Integer)
     img = db.Column(db.String(32768))
 
-    def __init__(self, login, password, name, isu):
+    def __init__(self, login, password, email, name, isu):
         self.login = login
         self.password = password
+        self.email = email
         self.name = name
         self.isu = isu
 
