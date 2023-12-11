@@ -18,6 +18,3 @@ def check_login_data(data: dict):
     if not all(key in LOGIN_DATA and len(login_keys) == len(LOGIN_DATA) for key in login_keys):
         return False
     return True
-
-def check_send_message_data(data: dict):
-    pass

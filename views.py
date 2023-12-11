@@ -1,11 +1,11 @@
 from config import application, db, login_manager
 from models import Users, Chats, Messages
-from flask import request, Response, session, jsonify
+from flask import request, Response, session, jsonify, current_app, make_response
 from flask_login import login_user, login_required, current_user, logout_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from utils import check_register_data, check_login_data
-from functools import wraps
+from functools import wraps, update_wrapper
 import json
 import random
 from sqlalchemy import or_, and_
@@ -21,12 +21,10 @@ def make_session_permanent():
     session.permanent = True
     application.permanent_session_lifetime = timedelta(days=31)
 
-
 def token_required(func):
     @wraps(func)
     def decorated(*args, **kwargs):
-        #token = request.args.get('token')
-        token = session['token']
+        token = request.args.get('token')
         if not token:
             return jsonify({'Alert!': 'Token is missing!'}), 401
         try:
@@ -44,14 +42,14 @@ def token_required(func):
 
 @application.route('/register', methods=['POST'])
 def register():
-    data = request.json()
+    data = request.json
     if not check_register_data(data=data):
         response = {"status": "400"}
         return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
     users = Users.query.all()
-    if any(user['login'] == user.login for user in users):
-        response = {'message': 'Username already exists!'}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
+    # if any(data['login'] == user.login for user in users):
+    #     response = {'message': 'Username already exists!'}
+    #     return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
     pwhash = generate_password_hash(password=data["password"])
     generated_isu = random.randint(100000, 999999)
     user = Users(login=data['login'], password=pwhash, email=data['email'], name=data["name"], isu=generated_isu)
@@ -90,17 +88,10 @@ def login():
         return Response(response=json.dumps(response, ensure_ascii=False), status=403, mimetype='application/json')
 
 
-@application.route('/logout', methods=['POST'])
+@application.route('/api/protected', methods=['GET', 'OPTIONS'])
 @token_required
-def logout(current_user):
-    current_user = None
-    session["token"] = None
-    session['logged_in'] = False
-    return jsonify({'text': 'Logged out successfully!'})
-
-
-@application.route('/protected', methods=['GET'])
-@token_required
+@cross_origin()
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def protected(current_user):
     return jsonify({'message': 'This is a protected route!', 'user': current_user.id})
 
