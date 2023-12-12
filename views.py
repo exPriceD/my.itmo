@@ -1,11 +1,11 @@
-from config import application, db, login_manager
+import os
+from config import application, db
 from models import Users, Chats, Messages
-from flask import request, Response, session, jsonify, current_app, make_response
-from flask_login import login_user, login_required, current_user, logout_user
+from flask import request, Response, session, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from utils import check_register_data, check_login_data
-from functools import wraps, update_wrapper
+from functools import wraps
 import json
 import random
 from sqlalchemy import or_, and_
@@ -13,13 +13,7 @@ from flask_cors import cross_origin, CORS
 import jwt
 
 cors = CORS(app=application)
-application.config['CORS_HEADERS'] = ['Content-Type', "Authorization"]
 
-
-@application.before_request
-def make_session_permanent():
-    session.permanent = True
-    application.permanent_session_lifetime = timedelta(days=31)
 
 def token_required(func):
     @wraps(func)
@@ -52,11 +46,30 @@ def register():
     #     return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
     pwhash = generate_password_hash(password=data["password"])
     generated_isu = random.randint(100000, 999999)
-    user = Users(login=data['login'], password=pwhash, email=data['email'], name=data["name"], isu=generated_isu)
+    user = Users(
+        login=data['login'], password=pwhash, email=data['email'], name=data["name"], isu=generated_isu,
+        role=data["role"], course=data["course"], faculty=data["faculty"], group=data["group"],
+    )
     db.session.add(user)
     db.session.flush()
     db.session.commit()
-    response = {"status": "200"}
+    db.session.refresh(user)
+    user = Users.query.filter_by(id=user.id).first()
+    response = {
+        "status": "200",
+        "user": {
+            "login": user.login,
+            "password": data["password"],
+            "name": user.name,
+            "isu": user.isu,
+            "role": user.role,
+            "course": user.course,
+            "faculty": user.faculty,
+            "group": user.group,
+            "img": user.img
+        },
+        "text": "The user has been registered"
+    }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
@@ -75,7 +88,7 @@ def login():
         token = jwt.encode(
             {
                 'id': int(user.id),
-                'exp': datetime.utcnow() + timedelta(minutes=30)
+                'exp': datetime.utcnow() + timedelta(days=31)
             },
             application.config['SECRET_KEY']
         )
@@ -113,11 +126,12 @@ def get_all_chats(current_user):
         data = {
             chat.last_message_date: {
                 "chat_id": chat.id,
-                "opponent_name": opponent.name,  # добавить img base64
+                "opponent_name": opponent.name,
                 "opponent_img": opponent.img,
                 "last_message": chat.last_message,
                 "message_date": chat.last_message_date,
-                "is_read": chat.is_read
+                "is_read": chat.is_read,
+                "unread_count": chat.unread_count
             }
         }
         if chat.last_message:
@@ -125,20 +139,27 @@ def get_all_chats(current_user):
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route("/api/all_message/<int:chat_id>", methods=["GET"])
+@application.route("/api/all_messages/", methods=["GET"])
 @cross_origin()
 @token_required
-def get_all_message(chat_id, current_user):
+def get_all_message(current_user):
+    chat_id = request.args.get('chat_id')
     user_id = current_user.id
     chat = Chats.query.filter_by(id=chat_id).first()
     if not user_id:
         response = {"status": "500", "text": "Not user"}
         return Response(response=json.dumps(response, ensure_ascii=False), status=500, mimetype='application/json')
     if user_id != chat.first_member_id and user_id != chat.second_member_id:
-        response = {"status": "500"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=500, mimetype='application/json')
+        response = {"status": "403", 'text': "Is not a member"}
+        return Response(response=json.dumps(response, ensure_ascii=False), status=403, mimetype='application/json')
     messages = Messages.query.filter_by(chat_id=chat_id)
     response = {"status": 200, "messages": []}
+    # chat.unread_count = 0
+    chat.is_read = True
+    db.session.add(chat)
+    db.session.flush()
+    db.session.commit()
+    db.session.refresh(chat)
     for message in messages:
         data = {
             message.send_date: {
@@ -156,11 +177,12 @@ def get_all_message(chat_id, current_user):
 @cross_origin()
 @token_required
 def send_message(current_user):
+    user_id = current_user.id
     data = request.json
     dt_now = str(datetime.now().strftime("%H:%M:%S"))
     message = Messages(
         chat_id=data["chat_id"],
-        sender_id=data["sender_id"],
+        sender_id=user_id,
         recipient_id=data["recipient_id"],
         message=data["message"],
         media=None,
@@ -175,6 +197,7 @@ def send_message(current_user):
     chat.last_message = data["message"]
     chat.last_message_date = dt_now
     chat.is_read = False
+    chat.unread_count += 1
     db.session.commit()
     current_message = Messages.query.filter_by(id=message.id).first()
     response = {
@@ -202,7 +225,8 @@ def create_chat(current_user):
         creation_date=datetime.now(),
         last_message=None,
         last_message_date=None,
-        is_read=True
+        is_read=True,
+        unread_count=0
     )
     db.session.add(chat)
     db.session.flush()
@@ -232,6 +256,7 @@ def get_new_messages(current_user):
     response = {"status": 200, "messages": []}
     for message in unread_messages:
         data = {
+            "chat_id": message.chat_id,
             "message_id": message.id,
             "sender_id": message.sender_id,
             "recipient_id": message.recipient_id,
@@ -243,10 +268,11 @@ def get_new_messages(current_user):
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route("/api/all_users/<string:key>", methods=["GET"])
+@application.route("/api/all_users/", methods=["GET"])
 @cross_origin()
 @token_required
-def get_all_user(key: str, current_user):
+def get_all_user(current_user):
+    key = request.args.get('key')
     users = Users.query.all()
     response = {"status": 200, "users": []}
     for user in users:
@@ -255,16 +281,21 @@ def get_all_user(key: str, current_user):
                 "id": user.id,
                 "name": user.name,
                 "isu": user.isu,
+                "role": user.role,
+                "course": user.course,
+                "faculty": user.faculty,
+                "group": user.group,
                 "img": user.img
             }
             response["users"].append(data)
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route('/api/user/<int:id>')
+@application.route('/api/user/')
 @cross_origin()
 @token_required
-def get_user(id, current_user):
+def get_user(current_user):
+    id = request.args.get('id')
     user = Users.query.filter_by(id=id).first()
     if not user:
         response = {"status": 404, "text": "User not found"}
@@ -275,7 +306,16 @@ def get_user(id, current_user):
             "id": user.id,
             "name": user.name,
             "isu": user.isu,
+            "role": user.role,
+            "course": user.course,
+            "faculty": user.faculty,
+            "group": user.group,
             "img": user.img
         }
     }
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+
+
+@application.route('/media/user/<int:image_id>')
+def get_user_image(image_id):
+    return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype='image/jpg')

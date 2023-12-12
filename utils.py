@@ -1,4 +1,6 @@
-REGISTER_DATA = {'login': str, 'password': str, 'email': str, 'name': str}
+REGISTER_DATA = {
+    'login': str, 'password': str, 'email': str, 'name': str, "role": str, "course": int, "faculty": str, "group": str
+}
 LOGIN_DATA = {'login': str, 'password': str}
 
 
