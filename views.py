@@ -231,7 +231,7 @@ def get_all_message(current_user):
 def send_message(current_user):
     user_id = current_user.id
     data = request.json
-    dt_now = str(datetime.now().strftime("%H:%M:%S"))
+    dt_now = str(datetime.now().strftime("%H:%M"))
     message = Messages(
         chat_id=data["chat_id"],
         sender_id=user_id,
