@@ -212,12 +212,10 @@ def get_all_message(current_user):
     db.session.refresh(chat)
     for message in messages:
         data = {
-            message.send_date: {
-                "sender_id": message.sender_id,
-                "message": message.message,
-                "date": message.send_date,
-                "is_read": message.is_read,
-            }
+            "sender_id": message.sender_id,
+            "message": message.message,
+            "date": message.send_date,
+            "is_read": message.is_read,
         }
         response["messages"].append(data)
     return Response(
