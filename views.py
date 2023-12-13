@@ -18,28 +18,35 @@ cors = CORS(app=application)
 def token_required(func):
     @wraps(func)
     def decorated(*args, **kwargs):
-        token = request.args.get('token')
+        token = request.args.get("token")
         if not token:
-            return jsonify({'Alert!': 'Token is missing!'}), 401
+            return jsonify({"Alert!": "Token is missing!"}), 401
         try:
-            data = jwt.decode(token, application.config['SECRET_KEY'], algorithms=["HS256"])
+            data = jwt.decode(
+                token, application.config["SECRET_KEY"], algorithms=["HS256"]
+            )
             current_user = Users.query.filter_by(id=data["id"]).first()
         # You can use the JWT errors in exception
         # except jwt.InvalidTokenError:
         #     return 'Invalid token. Please log in again.'
         except Exception as E:
             print(E)
-            return jsonify({'Message': 'Invalid token'}), 403
+            return jsonify({"Message": "Invalid token"}), 403
         return func(current_user, *args, **kwargs)
+
     return decorated
 
 
-@application.route('/register', methods=['POST'])
+@application.route("/register", methods=["POST"])
 def register():
     data = request.json
     if not check_register_data(data=data):
         response = {"status": "400"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=400,
+            mimetype="application/json",
+        )
     users = Users.query.all()
     # if any(data['login'] == user.login for user in users):
     #     response = {'message': 'Username already exists!'}
@@ -47,8 +54,15 @@ def register():
     pwhash = generate_password_hash(password=data["password"])
     generated_isu = random.randint(100000, 999999)
     user = Users(
-        login=data['login'], password=pwhash, email=data['email'], name=data["name"], isu=generated_isu,
-        role=data["role"], course=data["course"], faculty=data["faculty"], group=data["group"],
+        login=data["login"],
+        password=pwhash,
+        email=data["email"],
+        name=data["name"],
+        isu=generated_isu,
+        role=data["role"],
+        course=data["course"],
+        faculty=data["faculty"],
+        group=data["group"],
     )
     db.session.add(user)
     db.session.flush()
@@ -66,47 +80,64 @@ def register():
             "course": user.course,
             "faculty": user.faculty,
             "group": user.group,
-            "img": user.img
+            "img": user.img,
         },
-        "text": "The user has been registered"
+        "text": "The user has been registered",
     }
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/login', methods=['POST'])
+@application.route("/login", methods=["POST"])
 def login():
     data = request.json
     if not check_login_data(data=data):
         response = {"status": "400"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=400, mimetype='application/json')
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=400,
+            mimetype="application/json",
+        )
     user = Users.query.filter_by(login=data["login"]).first()
     if not user:
-        response = {'status': 404, "text": "User not found"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
-    if check_password_hash(pwhash=user.password, password=data["password"]):
-        session['logged_in'] = True
-        token = jwt.encode(
-            {
-                'id': int(user.id),
-                'exp': datetime.utcnow() + timedelta(days=31)
-            },
-            application.config['SECRET_KEY']
+        response = {"status": 404, "text": "User not found"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=200,
+            mimetype="application/json",
         )
-        token = bytes(token, 'utf-8')
-        session['token'] = token
-        response = {'status': 200, 'token': token.decode('UTF-8')}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    if check_password_hash(pwhash=user.password, password=data["password"]):
+        session["logged_in"] = True
+        token = jwt.encode(
+            {"id": int(user.id), "exp": datetime.utcnow() + timedelta(days=31)},
+            application.config["SECRET_KEY"],
+        )
+        token = bytes(token, "utf-8")
+        session["token"] = token
+        response = {"status": 200, "token": token.decode("UTF-8")}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=200,
+            mimetype="application/json",
+        )
     else:
-        response = {'status': 403, 'text': "Incorrect password"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=403, mimetype='application/json')
+        response = {"status": 403, "text": "Incorrect password"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=403,
+            mimetype="application/json",
+        )
 
 
-@application.route('/api/protected', methods=['GET', 'OPTIONS'])
+@application.route("/api/protected", methods=["GET", "OPTIONS"])
 @token_required
 @cross_origin()
 # @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def protected(current_user):
-    return jsonify({'message': 'This is a protected route!', 'user': current_user.id})
+    return jsonify({"message": "This is a protected route!", "user": current_user.id})
 
 
 @application.route("/api/all_chats", methods=["GET"])
@@ -115,8 +146,14 @@ def get_all_chats(current_user):
     user_id = current_user.id
     if not user_id:
         response = {"status": "500"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=500, mimetype='application/json')
-    chats = Chats.query.filter(or_(Chats.first_member_id == user_id, Chats.second_member_id == user_id)).all()
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=500,
+            mimetype="application/json",
+        )
+    chats = Chats.query.filter(
+        or_(Chats.first_member_id == user_id, Chats.second_member_id == user_id)
+    ).all()
     response = {"status": 200, "chats": []}
     for chat in chats:
         if chat.first_member_id == user_id:
@@ -124,34 +161,44 @@ def get_all_chats(current_user):
         else:
             opponent = Users.query.filter_by(id=chat.first_member_id).first()
         data = {
-            chat.last_message_date: {
-                "chat_id": chat.id,
-                "opponent_name": opponent.name,
-                "opponent_img": opponent.img,
-                "last_message": chat.last_message,
-                "message_date": chat.last_message_date,
-                "is_read": chat.is_read,
-                "unread_count": chat.unread_count
-            }
+            "chat_id": chat.id,
+            "opponent_name": " ".join(opponent.name.split()[:2]),
+            "opponent_img": opponent.img,
+            "last_message": chat.last_message,
+            "message_date": ":".join(chat.last_message_date.split(":")[:2]),
+            "is_read": chat.is_read,
+            "unread_count": chat.unread_count,
         }
         if chat.last_message:
             response["chats"].append(data)
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
 @application.route("/api/all_messages/", methods=["GET"])
 @cross_origin()
 @token_required
 def get_all_message(current_user):
-    chat_id = request.args.get('chat_id')
+    chat_id = request.args.get("chat_id")
     user_id = current_user.id
     chat = Chats.query.filter_by(id=chat_id).first()
     if not user_id:
         response = {"status": "500", "text": "Not user"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=500, mimetype='application/json')
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=500,
+            mimetype="application/json",
+        )
     if user_id != chat.first_member_id and user_id != chat.second_member_id:
-        response = {"status": "403", 'text': "Is not a member"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=403, mimetype='application/json')
+        response = {"status": "403", "text": "Is not a member"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=403,
+            mimetype="application/json",
+        )
     messages = Messages.query.filter_by(chat_id=chat_id)
     response = {"status": 200, "messages": []}
     # chat.unread_count = 0
@@ -166,14 +213,18 @@ def get_all_message(current_user):
                 "sender_id": message.sender_id,
                 "message": message.message,
                 "date": message.send_date,
-                "is_read": message.is_read
+                "is_read": message.is_read,
             }
         }
         response["messages"].append(data)
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/api/send_message', methods=["POST"])
+@application.route("/api/send_message", methods=["POST"])
 @cross_origin()
 @token_required
 def send_message(current_user):
@@ -187,7 +238,7 @@ def send_message(current_user):
         message=data["message"],
         media=None,
         send_date=dt_now,
-        is_read=False
+        is_read=False,
     )
     db.session.add(message)
     db.session.flush()
@@ -207,13 +258,17 @@ def send_message(current_user):
             "sender_id": current_message.sender_id,
             "recipient_id": current_message.recipient_id,
             "message": current_message.message,
-            "date": current_message.send_date
-        }
+            "date": current_message.send_date,
+        },
     }
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/api/create_chat', methods=["POST"])
+@application.route("/api/create_chat", methods=["POST"])
 @cross_origin()
 @token_required
 def create_chat(current_user):
@@ -226,7 +281,7 @@ def create_chat(current_user):
         last_message=None,
         last_message_date=None,
         is_read=True,
-        unread_count=0
+        unread_count=0,
     )
     db.session.add(chat)
     db.session.flush()
@@ -235,24 +290,31 @@ def create_chat(current_user):
     current_req = Chats.query.filter_by(id=chat.id).first()
     opponent = Users.query.filter_by(id=chat.second_member_id).first()
     response = {
-        "status": 200, "data": {
+        "status": 200,
+        "data": {
             "chat_id": current_req.id,
             "opponent": {
                 "opponent_id": current_req.second_member_id,
                 "opponent_name": opponent.name,
-                "opponent_img": opponent.img
-            }
-        }
+                "opponent_img": opponent.img,
+            },
+        },
     }
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/api/new_messages', methods=["GET"])
+@application.route("/api/new_messages", methods=["GET"])
 @cross_origin()
 @token_required
 def get_new_messages(current_user):
     user_id = current_user.id
-    unread_messages = Messages.query.filter(and_(Messages.recipient_id == user_id, Messages.is_read == False)).all()
+    unread_messages = Messages.query.filter(
+        and_(Messages.recipient_id == user_id, Messages.is_read == False)
+    ).all()
     response = {"status": 200, "messages": []}
     for message in unread_messages:
         data = {
@@ -262,17 +324,21 @@ def get_new_messages(current_user):
             "recipient_id": message.recipient_id,
             "message": message.message,
             "date": message.send_date,
-            "is_read": message.is_read
+            "is_read": message.is_read,
         }
         response["messages"].append(data)
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
 @application.route("/api/all_users/", methods=["GET"])
 @cross_origin()
 @token_required
 def get_all_user(current_user):
-    key = request.args.get('key')
+    key = request.args.get("key")
     users = Users.query.all()
     response = {"status": 200, "users": []}
     for user in users:
@@ -285,21 +351,29 @@ def get_all_user(current_user):
                 "course": user.course,
                 "faculty": user.faculty,
                 "group": user.group,
-                "img": user.img
+                "img": user.img,
             }
             response["users"].append(data)
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/api/user/')
+@application.route("/api/user/")
 @cross_origin()
 @token_required
 def get_user(current_user):
-    id = request.args.get('id')
+    id = request.args.get("id")
     user = Users.query.filter_by(id=id).first()
     if not user:
         response = {"status": 404, "text": "User not found"}
-        return Response(response=json.dumps(response, ensure_ascii=False), status=404, mimetype='application/json')
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=404,
+            mimetype="application/json",
+        )
     response = {
         "status": 200,
         "user": {
@@ -310,12 +384,16 @@ def get_user(current_user):
             "course": user.course,
             "faculty": user.faculty,
             "group": user.group,
-            "img": user.img
-        }
+            "img": user.img,
+        },
     }
-    return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
 
 
-@application.route('/media/user/<int:image_id>')
+@application.route("/media/users/<int:image_id>")
 def get_user_image(image_id):
-    return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype='image/jpg')
+    return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype="image/jpg")
