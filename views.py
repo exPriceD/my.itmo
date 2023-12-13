@@ -164,8 +164,11 @@ def get_all_chats(current_user):
             "chat_id": chat.id,
             "opponent_name": " ".join(opponent.name.split()[:2]),
             "opponent_img": opponent.img,
+            "opponent_id": opponent.id,
             "last_message": chat.last_message,
-            "message_date": ":".join(chat.last_message_date.split(":")[:2]),
+            "message_date": ":".join(chat.last_message_date.split(":")[:2])
+            if chat.last_message_date
+            else "",
             "is_read": chat.is_read,
             "unread_count": chat.unread_count,
         }
@@ -342,7 +345,7 @@ def get_all_user(current_user):
     users = Users.query.all()
     response = {"status": 200, "users": []}
     for user in users:
-        if (key.isdigit and key in str(user.isu)) or (key in user.name):
+        if (key.isdigit and key in str(user.isu)) or (key.lower() in user.name.lower()):
             data = {
                 "id": user.id,
                 "name": user.name,
