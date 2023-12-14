@@ -203,6 +203,7 @@ def get_all_message(current_user):
             mimetype="application/json",
         )
     messages = Messages.query.filter_by(chat_id=chat_id)
+    
     response = {"status": 200, "messages": []}
     # chat.unread_count = 0
     chat.is_read = True
@@ -211,8 +212,13 @@ def get_all_message(current_user):
     db.session.commit()
     db.session.refresh(chat)
     for message in messages:
+        sender = Users.query.filter_by(id=message.sender_id).first()
         data = {
-            "sender_id": message.sender_id,
+            "sender_id": sender.id,
+            "sender": {
+                "image": sender.img,
+                "name": sender.name
+            },
             "message": message.message,
             "date": message.send_date,
             "is_read": message.is_read,
@@ -241,6 +247,7 @@ def send_message(current_user):
         send_date=dt_now,
         is_read=False,
     )
+    sender = Users.query.filter_by(id=message.sender_id).first()
     db.session.add(message)
     db.session.flush()
     db.session.commit()
@@ -257,6 +264,10 @@ def send_message(current_user):
         "message": {
             "message_id": current_message.id,
             "sender_id": current_message.sender_id,
+            "sender": {
+                "image": sender.img,
+                "name": sender.name  
+            },
             "recipient_id": current_message.recipient_id,
             "message": current_message.message,
             "date": current_message.send_date,
@@ -318,10 +329,15 @@ def get_new_messages(current_user):
     ).all()
     response = {"status": 200, "messages": []}
     for message in unread_messages:
+        sender = Users.query.filter_by(id=message.sender_id).first()
         data = {
             "chat_id": message.chat_id,
             "message_id": message.id,
             "sender_id": message.sender_id,
+            "sender": {
+                "image": sender.img,
+                "name": sender.name,
+            },
             "recipient_id": message.recipient_id,
             "message": message.message,
             "date": message.send_date,
