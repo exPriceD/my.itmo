@@ -219,6 +219,7 @@ def send_message(current_user):
 def create_chat(current_user):
     user_id = current_user.id
     data = request.json
+    user = Users.query.filter_by(id=data["second_member_id"]).first()
     chat = Chats(
         first_member_id=user_id,
         second_member_id=data["second_member_id"],
@@ -291,7 +292,7 @@ def get_all_user(current_user):
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route('/api/user/')
+@application.route('/api/user/', methods=["GET"])
 @cross_origin()
 @token_required
 def get_user(current_user):
@@ -316,6 +317,6 @@ def get_user(current_user):
     return Response(response=json.dumps(response, ensure_ascii=False), status=200, mimetype='application/json')
 
 
-@application.route('/media/user/<int:image_id>')
+@application.route('/media/users/<int:image_id>')
 def get_user_image(image_id):
     return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype='image/jpg')
