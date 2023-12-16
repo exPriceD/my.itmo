@@ -257,6 +257,7 @@ def send_message(current_user):
     chat.last_message_date = dt_now
     chat.is_read = False
     chat.unread_count += 1
+    chat.unread_user_id = int(data["recipient_id"])
     db.session.commit()
     current_message = Messages.query.filter_by(id=message.id).first()
     response = {

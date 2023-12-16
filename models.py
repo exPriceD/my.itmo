@@ -44,6 +44,7 @@ class Chats(db.Model):
     last_message_date = db.Column(db.String(128))
     is_read = db.Column(db.Boolean)
     unread_count = db.Column(db.Integer)
+    unread_user_id = db.Column(db.Integer)
 
     def __repr__(self):
         return f'Chat {self.id}'
