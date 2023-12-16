@@ -171,7 +171,7 @@ def get_all_chats(current_user):
             else "",
             "is_read": chat.is_read,
             "unread_count": chat.unread_count,
-            "unread_user_id": chat.unread_user_id
+            "unread_user_id": chat.unread_user_id,
         }
         if chat.last_message:
             response["chats"].append(data)
@@ -216,10 +216,7 @@ def get_all_message(current_user):
         sender = Users.query.filter_by(id=message.sender_id).first()
         data = {
             "sender_id": sender.id,
-            "sender": {
-                "image": sender.img,
-                "name": sender.name
-            },
+            "sender": {"image": sender.img, "name": sender.name},
             "message": message.message,
             "date": message.send_date,
             "is_read": message.is_read,
@@ -257,7 +254,7 @@ def send_message(current_user):
     chat.last_message = data["message"]
     chat.last_message_date = dt_now
     chat.is_read = False
-    chat.unread_count += 1
+    chat.unread_count = 1 + int(chat.unread_count)
     chat.unread_user_id = int(data["recipient_id"])
     db.session.commit()
     current_message = Messages.query.filter_by(id=message.id).first()
@@ -266,10 +263,7 @@ def send_message(current_user):
         "message": {
             "message_id": current_message.id,
             "sender_id": current_message.sender_id,
-            "sender": {
-                "image": sender.img,
-                "name": sender.name
-            },
+            "sender": {"image": sender.img, "name": sender.name},
             "recipient_id": current_message.recipient_id,
             "message": current_message.message,
             "date": current_message.send_date,
@@ -289,7 +283,10 @@ def create_chat(current_user):
     user_id = current_user.id
     data = request.json
     created_chat = Chats.query.filter(
-        and_(Chats.first_member_id == user_id, Chats.second_member_id == data["second_member_id"])
+        and_(
+            Chats.first_member_id == user_id,
+            Chats.second_member_id == data["second_member_id"],
+        )
     ).first()
     if created_chat:
         opponent = Users.query.filter_by(id=created_chat.second_member_id).first()
@@ -455,7 +452,10 @@ def delete_message(current_user):
 def delete_chat(current_user):
     id = request.args.get("id")
     chat = Chats.query.filter_by(id=id).first()
-    if chat.first_member_id == current_user.id or chat.second_member_id == current_user.id:
+    if (
+        chat.first_member_id == current_user.id
+        or chat.second_member_id == current_user.id
+    ):
         Chats.query.filter_by(id=id).delete()
         messages = Messages.query.filter_by(chat_id=id).all()
         for message in messages:
