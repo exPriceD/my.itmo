@@ -171,6 +171,7 @@ def get_all_chats(current_user):
             else "",
             "is_read": chat.is_read,
             "unread_count": chat.unread_count,
+            "unread_user_id": chat.unread_user_id
         }
         if chat.last_message:
             response["chats"].append(data)
