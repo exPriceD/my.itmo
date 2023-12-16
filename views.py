@@ -202,10 +202,10 @@ def get_all_message(current_user):
             status=403,
             mimetype="application/json",
         )
-    messages = Messages.query.filter_by(chat_id=chat_id)
+    messages = Messages.query.filter_by(chat_id=chat_id).all()
 
     response = {"status": 200, "messages": []}
-    # chat.unread_count = 0
+    chat.unread_count = 0
     chat.is_read = True
     db.session.add(chat)
     db.session.flush()
