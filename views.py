@@ -284,6 +284,14 @@ def send_message(current_user):
 def create_chat(current_user):
     user_id = current_user.id
     data = request.json
+    second_user = Users.query.filter_by(id=data["second_member_id"]).first()
+    if not second_user:
+        response = {"status": 404, "text": "Second user not found"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=404,
+            mimetype="application/json",
+        )
     created_chat = Chats.query.filter(
         and_(
             Chats.first_member_id == user_id,
