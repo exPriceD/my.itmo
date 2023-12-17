@@ -473,8 +473,7 @@ def delete_chat(current_user):
         or chat.second_member_id == current_user.id
     ):
         Chats.query.filter_by(id=id).delete()
-        messages = Messages.query.filter_by(chat_id=id).all()
-        db.session.delete(messages)
+        db.session.query(Messages).filter(Messages.chat_id == id).delete()
         db.session.commit()
     response = {"status": 200}
     return Response(
