@@ -213,6 +213,8 @@ def get_all_message(current_user):
     db.session.commit()
     db.session.refresh(chat)
     for message in messages:
+        message.is_read = True
+        db.session.commit()
         sender = Users.query.filter_by(id=message.sender_id).first()
         data = {
             "sender_id": sender.id,
