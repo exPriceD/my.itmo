@@ -189,6 +189,13 @@ def get_all_message(current_user):
     chat_id = request.args.get("chat_id")
     user_id = current_user.id
     chat = Chats.query.filter_by(id=chat_id).first()
+    if not chat:
+        response = {"status": 404, "text": "Chat not found"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=404,
+            mimetype="application/json",
+        )
     if not user_id:
         response = {"status": "500", "text": "Not user"}
         return Response(
@@ -354,8 +361,42 @@ def create_chat(current_user):
 @token_required
 def get_new_messages(current_user):
     user_id = current_user.id
+    openned_chat_id = request.args.get("openned_chat_id")
     unread_messages = Messages.query.filter(
-        and_(Messages.recipient_id == user_id, Messages.is_read == False)
+        and_(Messages.recipient_id == user_id, Messages.is_read == False, Messages.chat_id != openned_chat_id)
+    ).all()
+    response = {"status": 200, "messages": []}
+    for message in unread_messages:
+        sender = Users.query.filter_by(id=message.sender_id).first()
+        data = {
+            "chat_id": message.chat_id,
+            "message_id": message.id,
+            "sender_id": message.sender_id,
+            "sender": {
+                "image": sender.img,
+                "name": sender.name,
+            },
+            "recipient_id": message.recipient_id,
+            "message": message.message,
+            "date": message.send_date,
+            "is_read": message.is_read,
+        }
+        response["messages"].append(data)
+    return Response(
+        response=json.dumps(response, ensure_ascii=False),
+        status=200,
+        mimetype="application/json",
+    )
+
+
+@application.route("/api/new_chat_messages", methods=["GET"])
+@cross_origin()
+@token_required
+def get_new_messages_from_chat(current_user):
+    user_id = current_user.id
+    chat_id = request.args.get("chat_id")
+    unread_messages = Messages.query.filter(
+        and_(Messages.recipient_id == user_id, Messages.is_read == False, Messages.chat_id == chat_id)
     ).all()
     response = {"status": 200, "messages": []}
     for message in unread_messages:
