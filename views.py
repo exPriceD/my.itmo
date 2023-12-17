@@ -415,6 +415,8 @@ def get_new_messages_from_chat(current_user):
             "is_read": message.is_read,
         }
         response["messages"].append(data)
+        message.is_read = True
+    db.session.commit()
     return Response(
         response=json.dumps(response, ensure_ascii=False),
         status=200,
