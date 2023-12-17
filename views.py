@@ -225,6 +225,7 @@ def get_all_message(current_user):
         sender = Users.query.filter_by(id=message.sender_id).first()
         data = {
             "sender_id": sender.id,
+            "message_id": message.id,
             "sender": {"image": sender.img, "name": sender.name},
             "message": message.message,
             "date": message.send_date,
