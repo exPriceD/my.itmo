@@ -438,6 +438,13 @@ def get_user(current_user):
 def delete_message(current_user):
     id = request.args.get("id")
     message = Messages.query.filter_by(id=id).first()
+    if not message:
+        response = {"status": 404, "text": "Message not found"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=404,
+            mimetype="application/json",
+        )
     if message.sender_id == current_user.id:
         Messages.query.filter_by(id=id).delete()
         db.session.commit()
@@ -454,6 +461,13 @@ def delete_message(current_user):
 def delete_chat(current_user):
     id = request.args.get("id")
     chat = Chats.query.filter_by(id=id).first()
+    if not chat:
+        response = {"status": 404, "text": "Chat not found"}
+        return Response(
+            response=json.dumps(response, ensure_ascii=False),
+            status=404,
+            mimetype="application/json",
+        )
     if (
         chat.first_member_id == current_user.id
         or chat.second_member_id == current_user.id
