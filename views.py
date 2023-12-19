@@ -250,7 +250,7 @@ def send_message(current_user):
     data = request.json
     dt_now = str(datetime.now().strftime("%H:%M"))
     sent_date = dt_now[:16]
-    sender_user = Users.query.filter_by(id=data["sender_id"]).first()
+    sender_user = Users.query.filter_by(id=user_id).first()
     rec_user = Users.query.filter_by(id=data["recipient_id"]).first()
     sender_name = sender_user.name
     rec_email = rec_user.email
