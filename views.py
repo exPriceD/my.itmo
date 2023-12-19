@@ -549,15 +549,17 @@ def get_user_image(image_id):
     return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype="image/jpg")
 
 
-def async_send_mail(app,msgg):
+def async_send_mail(app, msgg):
     with app.app_context():
         mail.send(msgg)
+
 
 def send_mail(sender_name,recipient_email,send_date):
     subject = 'У вас новое сообщение на my.itmo'
     body = (f"Вам пришло новое сообщение от пользователя {sender_name}.\n"
             f"Отправлено {send_date}")
     msg = Message(subject,sender=application.config['MAIL_DEFAULT_SENDER'],recipients=[recipient_email],body=body)
-    thr = Thread(target=async_send_mail, args=[application,msg])
+    thr = Thread(target=async_send_mail, args=[application, msg])
     thr.start()
+    print("Сообщение отправлено на почту")
     return thr

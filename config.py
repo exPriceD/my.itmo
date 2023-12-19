@@ -21,7 +21,7 @@ application.config['JSON_AS_ASCII'] = False
 
 application.config['MAIL_SERVER'] = os.getenv("MAIL_SERVER")
 application.config['MAIL_PORT'] = os.getenv("MAIL_PORT")
-application.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS")
+# application.config['MAIL_USE_TLS'] = os.getenv("MAIL_USE_TLS")
 application.config['MAIL_USE_SSL'] = os.getenv("MAIL_USE_SSL")
 application.config['MAIL_USERNAME'] = os.getenv("MAIL_USERNAME")
 application.config['MAIL_DEFAULT_SENDER'] = os.getenv("MAIL_DEFAULT_SENDER")
