@@ -1,5 +1,5 @@
 import os
-from config import application, db
+from config import application, db, mail
 from models import Users, Chats, Messages
 from flask import request, Response, session, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,6 +11,8 @@ import random
 from sqlalchemy import or_, and_
 from flask_cors import cross_origin, CORS
 import jwt
+from flask_mail import Message
+from threading import Thread
 
 cors = CORS(app=application)
 
@@ -247,6 +249,11 @@ def send_message(current_user):
     user_id = current_user.id
     data = request.json
     dt_now = str(datetime.now().strftime("%H:%M"))
+    sent_date = dt_now[:16]
+    sender_user = Users.query.filter_by(id=data["sender_id"]).first()
+    rec_user = Users.query.filter_by(id=data["recipient_id"]).first()
+    sender_name = sender_user.name
+    rec_email = rec_user.email
     message = Messages(
         chat_id=data["chat_id"],
         sender_id=user_id,
@@ -280,6 +287,7 @@ def send_message(current_user):
             "date": current_message.send_date,
         },
     }
+    send_mail(sender_name, rec_email, sent_date)
     return Response(
         response=json.dumps(response, ensure_ascii=False),
         status=200,
@@ -539,3 +547,17 @@ def delete_chat(current_user):
 @application.route("/media/users/<int:image_id>")
 def get_user_image(image_id):
     return send_file(f"{os.getcwd()}/media/users/{image_id}.jpg", mimetype="image/jpg")
+
+
+def async_send_mail(app,msgg):
+    with app.app_context():
+        mail.send(msgg)
+
+def send_mail(sender_name,recipient_email,send_date):
+    subject = 'У вас новое сообщение на my.itmo'
+    body = (f"Вам пришло новое сообщение от пользователя {sender_name}.\n"
+            f"Отправлено {send_date}")
+    msg = Message(subject,sender=application.config['MAIL_DEFAULT_SENDER'],recipients=[recipient_email],body=body)
+    thr = Thread(target=async_send_mail, args=[application,msg])
+    thr.start()
+    return thr

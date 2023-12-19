@@ -4,6 +4,7 @@ from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
 import os
+from flask_mail import Mail
 
 load_dotenv()
 
@@ -30,3 +31,5 @@ db = SQLAlchemy(application)
 
 login_manager = LoginManager(application)
 login_manager.login_view = 'login'
+
+mail = Mail(application)
