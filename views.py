@@ -155,6 +155,7 @@ def get_all_chats(current_user):
         or_(Chats.first_member_id == user_id, Chats.second_member_id == user_id)
     ).all()
     response = {"status": 200, "chats": []}
+    chats = reversed(chats)
     for chat in chats:
         if chat.first_member_id == user_id:
             opponent = Users.query.filter_by(id=chat.second_member_id).first()
