@@ -563,5 +563,3 @@ def send_mail(sender_name,recipient_email,send_date):
     thr.start()
     print("Сообщение отправлено на почту")
     return thr
-
-# hello
